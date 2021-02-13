@@ -29,13 +29,21 @@ gcloud pubsub topics create calendar
 ## Deploy code to Cloud Functions
 
 ```
-gcloud functions deploy calendar_to_toggle --runtime python37 --trigger-topic calendar --allow-unauthenticated --memory 128MB
+gcloud functions deploy calendar_to_toggle \
+    --runtime python37 \
+    --trigger-topic calendar \
+    --allow-unauthenticated \
+    --memory 128MB
 ```
 
 ## Create Cloud Scheduler
 
 ```
-gcloud scheduler jobs create pubsub calendar_trigger --schedule "0 5-22 * * 1-5" --topic=calendar --message-body "1"
+gcloud scheduler jobs create pubsub calendar_trigger \
+    --schedule "0 5-22 * * 1-5" \
+    --topic=calendar \
+    --message-body "1" \
+    --time-zone "Europe/Budapest"
 ```
 
 
