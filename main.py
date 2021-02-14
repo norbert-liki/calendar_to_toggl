@@ -7,7 +7,7 @@ from toggl.api_client import TogglClientApi
 from typing import List
 
 
-class Calender2Toggle():
+class Calender2Toggl():
     def __init__(self) -> None:
         self.look_back_hours: int = 1
         self.time_from: str = None  # Format 2021-02-13T08:27:13.772498Z
@@ -32,14 +32,14 @@ class Calender2Toggle():
 
     def search_project_code(self, event: dict, projects: List[dict]) -> int:
         """1. Looks for project codes in calendar events
-        2. Looks up found project codes to get toggle project_id
+        2. Looks up found project codes to get toggl project_id
 
         Args:
             event (dict): single calendar event
-            projects List[dict]: Toggle projects in a list
+            projects List[dict]: Toggl projects in a list
 
         Returns:
-            project_id (int): matched toggle project_id
+            project_id (int): matched toggl project_id
         """
         event_desc = event.get('description')
 
@@ -53,7 +53,7 @@ class Calender2Toggle():
                 pass
 
     def __call__(self, event=None, context=None) -> None:
-        """Uploads calendar events to toggle within x last hours where x comes
+        """Uploads calendar events to toggl within x last hours where x comes
         from either Pub/Sub message or default 1.
 
         Args:
@@ -76,8 +76,8 @@ class Calender2Toggle():
 
         service = build('calendar', 'v3', credentials=creds,
                         cache_discovery=False)
-        toggle_client = TogglClientApi(toogle_settings)
-        projects = toggle_client.get_projects().json()
+        toggl_client = TogglClientApi(toogle_settings)
+        projects = toggl_client.get_projects().json()
 
         # Call the Calendar API
         events_result = service.events().list(calendarId='primary',
@@ -100,15 +100,15 @@ class Calender2Toggle():
                         "start": event['start'].get('dateTime'),
                         "stop": event['end'].get('dateTime'),
                         "pid": self.search_project_code(event, projects),
-                        "created_with": "calendar2toggle_app"
+                        "created_with": "calendar2toggl_app"
                     }
                 }
-                toggle_client.create_time_entry(new_entry)
+                toggl_client.create_time_entry(new_entry)
 
 
-def calendar_to_toggle(event=None, context=None):
-    Calender2Toggle()(event, context)
+def calendar_to_toggl(event=None, context=None):
+    Calender2Toggl()(event, context)
 
 
 if __name__ == '__main__':
-    calendar_to_toggle()
+    calendar_to_toggl()

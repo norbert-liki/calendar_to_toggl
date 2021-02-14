@@ -36,7 +36,7 @@ class getSecret():
             request={"name": f"projects/{self.project_number}/secrets/{secret_name}/versions/1"})
         return response.payload.data.decode("UTF-8")
 
-    def __call__(self, secret_name: str = "toggle_key") -> Dict:
+    def __call__(self, secret_name: str = "toggl_key") -> Dict:
         self.get_project_number()
         return {
             'token': self.get_secret(secret_name),

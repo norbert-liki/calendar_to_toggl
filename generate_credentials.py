@@ -7,8 +7,8 @@ from google.auth.transport.requests import Request
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 # MODFY THIS
-TOGGLE_SETTINGS = {
-    'token': "ADD YOUR TOGGLE SECRET HERE",
+TOGGL_SETTINGS = {
+    'token': "ADD YOUR TOGGL SECRET HERE",
     'user_agent': 'load_app',
     'workspace_id': 2049184  # Aliz workspace
 }
@@ -28,4 +28,4 @@ if not creds or not creds.valid:
         creds = flow.run_local_server(port=0)
     # Save the credentials for the next run
     with open('token.pickle', 'wb') as token:
-        pickle.dump((creds, TOGGLE_SETTINGS), token)
+        pickle.dump((creds, TOGGL_SETTINGS), token)
