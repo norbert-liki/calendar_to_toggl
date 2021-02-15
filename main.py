@@ -4,7 +4,10 @@ import pickle
 import re
 from googleapiclient.discovery import build
 from toggl.api_client import TogglClientApi
-from typing import List
+import requests
+from requests.auth import HTTPBasicAuth
+from urllib.parse import urlencode
+from typing import Dict, List
 
 
 class Calender2Toggl():
@@ -13,7 +16,14 @@ class Calender2Toggl():
         self.time_from: str = None  # Format 2021-02-13T08:27:13.772498Z
         self.time_to: str = None
 
-    def set_hours_param(self, event=None) -> int:
+        # Load credentials
+        try:
+            with open('token.pickle', 'rb') as token:
+                self.creds, self.toogle_settings = pickle.load(token)
+        except FileNotFoundError:
+            print("Credentials does not exist. Please genrate token.pickle first.")
+
+    def _set_hours_param(self, event=None) -> int:
         """ Sets look_back_hours parameter from Pub/Sub trigger message"""
         try:
             if 'data' in event:
@@ -22,7 +32,7 @@ class Calender2Toggl():
         except:
             pass
 
-    def calculate_from_to_timestamps(self) -> None:
+    def _calculate_from_to_timestamps(self) -> None:
         """Calculates date ranges within calendar events will be querried."""
         now = datetime.datetime.utcnow()
         time_to = now.isoformat() + 'Z'  # 'Z' indicates UTC time
@@ -30,7 +40,7 @@ class Calender2Toggl():
             'Z'  # 'Z' indicates UTC time
         self.time_from, self.time_to = time_from, time_to
 
-    def search_project_code(self, event: dict, projects: List[dict]) -> int:
+    def _search_project_code(self, cal_event: dict, projects: List[dict]) -> int:
         """1. Looks for project codes in calendar events
         2. Looks up found project codes to get toggl project_id
 
@@ -41,16 +51,36 @@ class Calender2Toggl():
         Returns:
             project_id (int): matched toggl project_id
         """
-        event_desc = event.get('description')
+        cal_event_desc = cal_event.get('description')
 
-        if event_desc:
+        if cal_event_desc:
             PROJECT_PATTERN = r'\(\w+-\d+\)|([eE]ngineering)|(HR)|(PMO)'
             try:
                 found_project_name = re.search(
-                    PROJECT_PATTERN, event_desc).group()
+                    PROJECT_PATTERN, cal_event_desc).group()
                 return next((p['id'] for p in projects if found_project_name in p['name']))
             except AttributeError:
                 pass
+
+    def _query_existing_toggl_items(self):
+        """Query existing time entries in toggl to avoid duplicates"""
+
+        auth = HTTPBasicAuth(self.toogle_settings['token'], 'api_token')
+        end_tm = datetime.datetime.now().astimezone().replace(microsecond=0)
+        start_tm = end_tm - datetime.timedelta(hours=self.look_back_hours)
+
+        url_schema = {"start_date": start_tm.isoformat(), "end_date": end_tm.isoformat()}
+        url = "https://api.track.toggl.com/api/v8/time_entries?" + urlencode(url_schema)
+
+        return requests.get(url, auth=auth).json()
+
+    def _check_event_load_status(self, cal_event: Dict, toggl_items: Dict) -> bool:
+        """Checks whether an event is an all day event and it is already loaded to toggl"""
+
+        all_day_flag = cal_event['start'].get('dateTime') is not None
+        loaded_flag = len([time_entry for time_entry in toggl_items if cal_event.get(
+            "summary") == time_entry.get("description")]) == 0
+        return all_day_flag and loaded_flag
 
     def __call__(self, event=None, context=None) -> None:
         """Uploads calendar events to toggl within x last hours where x comes
@@ -64,42 +94,39 @@ class Calender2Toggl():
         """
 
         # Setting lookback timeframe
-        self.set_hours_param(event)
-        self.calculate_from_to_timestamps()
+        self._set_hours_param(event)
+        self._calculate_from_to_timestamps()
 
-        # Load credentials
-        try:
-            with open('token.pickle', 'rb') as token:
-                creds, toogle_settings = pickle.load(token)
-        except FileNotFoundError:
-            print("Credentials does not exist. Please genrate token.pickle first.")
-
-        service = build('calendar', 'v3', credentials=creds,
+        service = build('calendar', 'v3', credentials=self.creds,
                         cache_discovery=False)
-        toggl_client = TogglClientApi(toogle_settings)
+        toggl_client = TogglClientApi(self.toogle_settings)
         projects = toggl_client.get_projects().json()
+        recorded_time_entries = self._query_existing_toggl_items()
 
         # Call the Calendar API
-        events_result = service.events().list(calendarId='primary',
-                                              timeMin=self.time_from, timeMax=self.time_to,
-                                              maxResults=None, singleEvents=True,
-                                              orderBy='startTime').execute()
-        events = events_result.get('items', [])
+        cal_events_result = service.events().list(calendarId='primary',
+                                                  timeMin=self.time_from, timeMax=self.time_to,
+                                                  maxResults=None, singleEvents=True,
+                                                  orderBy='startTime').execute()
+        cal_events = cal_events_result.get('items', [])
 
         # Load events to toogle
-        if not events:
+        if not cal_events:
             print(
                 f'No events found between {self.time_from} and {self.time_to}.')
-        for event in events:
-            if event['start'].get('dateTime'):  # Exclude all day events
+        for cal_event in cal_events:
+            if self._check_event_load_status(cal_event, recorded_time_entries):
+                cal_event_start = datetime.datetime.fromisoformat(cal_event['start'].get('dateTime'))
+                cal_event_end = datetime.datetime.fromisoformat(cal_event['end'].get('dateTime'))
+
                 new_entry = {
                     "time_entry": {
-                        "description": event['summary'],
+                        "description": cal_event['summary'],
                         "tags": [],
-                        "duration": None,
-                        "start": event['start'].get('dateTime'),
-                        "stop": event['end'].get('dateTime'),
-                        "pid": self.search_project_code(event, projects),
+                        "duration": (cal_event_end - cal_event_start).seconds,
+                        "start": cal_event['start'].get('dateTime'),
+                        "stop": cal_event['end'].get('dateTime'),
+                        "pid": self._search_project_code(cal_event, projects),
                         "created_with": "calendar2toggl_app"
                     }
                 }

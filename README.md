@@ -49,7 +49,7 @@ gcloud scheduler jobs create pubsub calendar_trigger \
 ## Next steps
 - [ ] Automate deployment
 - [ ] Store Toggl project infos in Datastore since querying it requires admin rights
-
+- [x] Avoid duplicate time entries. (Currently based on event summary)
 
 ## Additional how to-s
 ### Generate requirements.txt from Pipfile
