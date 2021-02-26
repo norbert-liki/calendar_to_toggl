@@ -77,12 +77,22 @@ class Calender2Toggl():
         return requests.get(url, auth=auth).json()
 
     def _check_event_load_status(self, cal_event: Dict, toggl_items: Dict) -> bool:
-        """Checks whether an event is an all day event and it is already loaded to toggl"""
+        """Checks whether an event is an all day event and it is already loaded to toggl
+        or if it contains a description that should not be loaded."""
 
         all_day_flag = cal_event['start'].get('dateTime') is not None
         loaded_flag = len([time_entry for time_entry in toggl_items if cal_event.get(
             "summary") == time_entry.get("description")]) == 0
-        return all_day_flag and loaded_flag
+
+        DESC_FILTER_PAT = r'([oO]ut of office)|(ooo)'
+
+        try:
+            found_project_name = re.search(
+                DESC_FILTER_PAT, cal_event.get("summary")).group()
+            filter_desc = len(found_project_name) == 0
+        except AttributeError:
+            filter_desc = True
+        return (all_day_flag and loaded_flag and filter_desc)
 
     def __call__(self, event=None, context=None) -> None:
         """Uploads calendar events to toggl within x last hours where x comes
