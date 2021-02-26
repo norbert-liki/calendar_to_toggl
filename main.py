@@ -84,6 +84,8 @@ class Calender2Toggl():
         loaded_flag = len([time_entry for time_entry in toggl_items if cal_event.get(
             "summary") == time_entry.get("description")]) == 0
 
+        ouf_of_office = cal_event.get("eventType") != "outOfOffice" or False
+
         DESC_FILTER_PAT = r'([oO]ut of office)|(ooo)'
 
         try:
@@ -92,7 +94,8 @@ class Calender2Toggl():
             filter_desc = len(found_project_name) == 0
         except AttributeError:
             filter_desc = True
-        return (all_day_flag and loaded_flag and filter_desc)
+
+        return (all_day_flag and loaded_flag and filter_desc and ouf_of_office)
 
     def __call__(self, event=None, context=None) -> None:
         """Uploads calendar events to toggl within x last hours where x comes
