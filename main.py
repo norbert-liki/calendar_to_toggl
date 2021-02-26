@@ -8,6 +8,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from urllib.parse import urlencode
 from typing import Dict, List
+from pytz import timezone
 
 
 class Calender2Toggl():
@@ -15,6 +16,7 @@ class Calender2Toggl():
         self.look_back_hours: int = 1
         self.time_from: str = None  # Format 2021-02-13T08:27:13.772498Z
         self.time_to: str = None
+        self.timezone: timezone = timezone("Europe/Budapest")
 
         # Load credentials
         try:
@@ -29,7 +31,7 @@ class Calender2Toggl():
             if 'data' in event:
                 self.look_back_hours = int(
                     base64.b64decode(event['data']).decode('utf-8'))
-        except:
+        except Exception:
             pass
 
     def _calculate_from_to_timestamps(self) -> None:
@@ -66,8 +68,8 @@ class Calender2Toggl():
         """Query existing time entries in toggl to avoid duplicates"""
 
         auth = HTTPBasicAuth(self.toogle_settings['token'], 'api_token')
-        end_tm = datetime.datetime.now().astimezone().replace(microsecond=0)
-        start_tm = end_tm - datetime.timedelta(hours=self.look_back_hours)
+        end_tm = datetime.datetime.now().astimezone(self.timezone).replace(microsecond=0)
+        start_tm = end_tm - datetime.timedelta(hours=self.look_back_hours + 1)
 
         url_schema = {"start_date": start_tm.isoformat(), "end_date": end_tm.isoformat()}
         url = "https://api.track.toggl.com/api/v8/time_entries?" + urlencode(url_schema)
