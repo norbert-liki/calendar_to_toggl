@@ -71,7 +71,7 @@ class Calender2Toggl():
 
         auth = HTTPBasicAuth(self.toogle_settings['token'], 'api_token')
         end_tm = datetime.datetime.now().astimezone(self.timezone).replace(microsecond=0)
-        start_tm = end_tm - datetime.timedelta(hours=self.look_back_hours + 1)
+        start_tm = end_tm - datetime.timedelta(hours=self.look_back_hours + 3)
 
         url_schema = {"start_date": start_tm.isoformat(), "end_date": end_tm.isoformat()}
         url = "https://api.track.toggl.com/api/v8/time_entries?" + urlencode(url_schema)

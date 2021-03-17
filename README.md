@@ -33,16 +33,16 @@ gcloud functions deploy calendar_to_toggl \
     --runtime python37 \
     --trigger-topic calendar \
     --allow-unauthenticated \
-    --memory 128MB
+    --memory 512MB
 ```
 
 ## Create Cloud Scheduler
 
 ```
 gcloud scheduler jobs create pubsub calendar_trigger \
-    --schedule "0 5-22 * * 1-5" \
+    --schedule "0 10-22/4 * * 1-5" \
     --topic=calendar \
-    --message-body "1" \
+    --message-body "4" \
     --time-zone "Europe/Budapest"
 ```
 
