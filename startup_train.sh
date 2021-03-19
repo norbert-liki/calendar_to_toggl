@@ -15,9 +15,10 @@ export HOME=/root
 git clone -b ml_pred https://github.com/norbert-liki/calendar_to_toggl.git /opt/app
 
 # Python environment setup
+cd /opt/app
 pipenv install --system --deploy
 pipenv shell
-pip install -r /opt/app/requirements.txt
+pip install -r requirements.txt
 
 # Set ownership to newly created account
 chown -R pythonapp:pythonapp /opt/app
