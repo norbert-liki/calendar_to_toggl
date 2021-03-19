@@ -15,6 +15,7 @@ google-cloud-datastore = "*"
 dill = "*"
 xgboost = "*"
 catboost = "*"
+google-cloud-storage = "*"
 
 [dev-packages]
 flake8 = "*"
