@@ -4,8 +4,8 @@ sudo bash install-logging-agent.sh
 
 # Install or update needed software
 apt-get update
-apt-get install -yq git python python-pip
-pip install --upgrade pip pipenv
+apt-get install -yq git python3 python3-pip cmake
+pip3 install --upgrade pip pipenv
 
 # Account to own server process
 useradd -m -d /home/pythonapp pythonapp
@@ -17,11 +17,10 @@ git clone -b ml_pred https://github.com/norbert-liki/calendar_to_toggl.git /opt/
 # Python environment setup
 cd /opt/app
 pipenv install --system --deploy
-pipenv shell
-pip install -r requirements.txt
+pipenv install pycaret[full]==2.3.0 --skip-lock
 
 # Set ownership to newly created account
 chown -R pythonapp:pythonapp /opt/app
 
 # Run the training script
-python /opt/app/train.py
+pipenv run python /opt/app/train.py
