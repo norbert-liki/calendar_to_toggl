@@ -9,11 +9,19 @@ google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
 python-toggl = "*"
 google-cloud-secret-manager = "*"
+pandas = "*"
+scikit-learn = "==0.23.2"
+google-cloud-datastore = "*"
+dill = "*"
+xgboost = "*"
+catboost = "*"
+google-cloud-storage = "*"
 
 [dev-packages]
 flake8 = "*"
 jupyterlab = "*"
 autopep8 = "*"
+mypy = "*"
 
 [requires]
 python_version = "3.7"

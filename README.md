@@ -1,8 +1,13 @@
 # ReadMe
 
-Automatic loading of Google Calendar events to Toggl using trigger events coming from Cloud Schedule via Pub/Sub to a Cloud Functions service.
+Automatic loading of Google Calendar events to Toggl using trigger events coming from Cloud Scheduler via Pub/Sub to a Cloud Functions service.
+The solution has 2 main parts:
 
-## How to setup
+1. Function that loads calendar events and predicts the project for each event
+2. Function that retrains prediction model periodically
+
+
+## 1. Setting up loading function 
 
 1. Generate Calender API  and Toggl credentials using [generate_credentials.py](generate_credentials.py).
 2. Enable required Google APIs.
@@ -10,7 +15,7 @@ Automatic loading of Google Calendar events to Toggl using trigger events coming
 4. Deploy Cloud Function.
 5. Deploy a scheduled job in Cloud Scheduler.
 
-### 3. Enable APIs
+### Enable APIs
 
 ```
 gcloud services enable pubsub.googleapis.com \
@@ -20,36 +25,72 @@ gcloud services enable pubsub.googleapis.com \
     servicemanagement.googleapis.com
 ```
 
-### 4. Create Pub/Sub topic
+### Create Pub/Sub topic
 
 ```
 gcloud pubsub topics create calendar
 ```
 
-## Deploy code to Cloud Functions
+### Deploy code to Cloud Functions
 
 ```
 gcloud functions deploy calendar_to_toggl \
     --runtime python37 \
     --trigger-topic calendar \
-    --allow-unauthenticated \
-    --memory 128MB
+    --memory 512MB
 ```
 
-## Create Cloud Scheduler
+### Create Cloud Scheduler
 
 ```
 gcloud scheduler jobs create pubsub calendar_trigger \
-    --schedule "0 5-22 * * 1-5" \
+    --schedule "0 10-22/4 * * 1-5" \
     --topic=calendar \
-    --message-body "1" \
+    --message-body "4" \
     --time-zone "Europe/Budapest"
 ```
+
+## 2. Setting up retraining pipeline
+
+
+**From the retrainer_cf folder issue the following commands:**
+
+
+### Copy the pickled credentials to a cloud storage bucket and add it to the [retrainer_cf/main.py](./retrainer_cf/main.py)
+
+
+### Create Pub/Sub topic
+
+```
+gcloud pubsub topics create calendar_retrain
+```
+
+### Deploy code to Cloud Functions
+
+```
+gcloud functions deploy calendar_retrain \
+    --runtime python37 \
+    --trigger-topic calendar_retrain \
+    --memory 128MB
+```
+
+### Create Cloud Scheduler
+
+```
+gcloud scheduler jobs create pubsub calendar_retraining_trigger \
+    --schedule "0 22 * * 1-5" \
+    --topic=calendar_retrain \
+    --message-body "0" \
+    --time-zone "Europe/Budapest"
+```
+
+
+
+
 
 ## Next steps
 - [ ] Automate deployment
 - [ ] Store Toggl project infos in Datastore since querying it requires admin rights
-- [x] Avoid duplicate time entries. (Currently based on event summary)
 
 ## Additional how to-s
 ### Generate requirements.txt from Pipfile
@@ -67,3 +108,19 @@ printf "YOUR SECRET" | gcloud secrets create toggl_key --data-file=-
 ```
 
 Then add methods from [getSecret.py](getSecret.py) to [main.py](main.py).
+
+
+### Run retraining job
+
+From the retrainer_cf folder issue:
+
+```
+gcloud compute instances create calendar-retrainer \
+    --image-family=debian-10 \
+    --image-project=debian-cloud \
+    --machine-type=e2-medium-2 \
+    --scopes cloud-platform \
+    --metadata-from-file startup-script=startup_train.sh \
+    --zone us-central1-a \
+    --preemptible
+```
