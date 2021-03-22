@@ -12,6 +12,7 @@ useradd -m -d /home/pythonapp pythonapp
 
 # Fetch source code
 export HOME=/root
+mkdir -p /opt/app
 git clone https://github.com/norbert-liki/calendar_to_toggl.git /opt/app
 
 # Python environment setup
