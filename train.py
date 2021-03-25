@@ -58,10 +58,10 @@ def train():
 
     pp = ProjectPredictor()
     train, test = pp.preprocess_data(ce, te, toggl_pjs)
-    pipe = pp.fit(train, test, finetune=True)
+    pp.fit(train, test, finetune=True)
 
     ds = DataStorer()
-    ds.store(pipe)
+    ds.store(pp)
 
     atexit.register(kill_vm)
 

@@ -11,16 +11,8 @@ from sklearn.compose import make_column_selector
 
 
 class ProjectPredictor:
-    def __init__(self, text_feature: str = "description") -> None:
-        text_pipeline = Pipeline([
-            ('vect', CountVectorizer(lowercase=True)),
-            ('tfidf', TfidfTransformer()),
-        ])
-        self.custom_transformer = make_column_transformer(
-            (text_pipeline,
-             text_feature),
-            (OneHotEncoder(handle_unknown="ignore"),
-             make_column_selector(dtype_include=object)))
+    def __init__(self) -> None:
+        pass
 
     @staticmethod
     def attendee_count_(row):
@@ -93,7 +85,7 @@ class ProjectPredictor:
         ce_df = pd.DataFrame(calendar_events)
 
         train_df = (
-            ce_df.filter(["start", "end", "attendees", "creator", "summary", "eventType", "colorId"])
+            ce_df.filter(["start", "end", "attendees", "creator", "summary", "eventType", "colorId", "description"])
             .fillna({"colorId": '99'})
             .assign(start_tm=pd.to_datetime(ce_df.start.apply(lambda x: x.get("dateTime"))),
                     end_tm=pd.to_datetime(ce_df.end.apply(lambda x: x.get("dateTime"))),
@@ -106,6 +98,7 @@ class ProjectPredictor:
                     attendee_cnt=ce_df.attendees.apply(self.attendee_count_),
                     creator=ce_df.creator.apply(lambda x: x.get("email")),
                     start_hour=(lambda x: x.start_tm.dt.hour),
+                    text=lambda x: x.summary + " " + x.description.fillna(""),
                     description=(lambda x: x.summary),
                     response=lambda x: x.attendees.apply(self.get_my_response)
                     )
@@ -153,7 +146,7 @@ class ProjectPredictor:
             ce_df["colorId"] = "99"
 
         return (
-            ce_df.filter(["start", "end", "attendees", "creator", "summary", "eventType", "colorId"])
+            ce_df.filter(["start", "end", "attendees", "creator", "summary", "eventType", "colorId", "description"])
             .fillna({"colorId": '99'})
             .assign(start_tm=pd.to_datetime(ce_df.start.apply(lambda x: x.get("dateTime"))),
                     end_tm=pd.to_datetime(ce_df.end.apply(lambda x: x.get("dateTime"))),
@@ -166,6 +159,7 @@ class ProjectPredictor:
                     attendee_cnt=ce_df.attendees.apply(ProjectPredictor.attendee_count_),
                     creator=ce_df.creator.apply(lambda x: x.get("email")),
                     start_hour=(lambda x: x.start_tm.dt.hour),
+                    text=lambda x: x.summary + " " + x.description.fillna(""),
                     description=(lambda x: x.summary),
                     )
             .drop(columns=["start", "end", "attendees"])
@@ -173,7 +167,7 @@ class ProjectPredictor:
             .query("pid.isna() & duration.isna()", engine="python")
         )
 
-    def fit(self, train: pd.DataFrame, test: pd.DataFrame, finetune: bool = False) -> Pipeline:
+    def fit(self, train: pd.DataFrame, test: pd.DataFrame, target: str = "name", finetune: bool = False, text_feature: str = "text", **kwargs) -> Pipeline:
         """Trains and finetunes model for project prediction.
 
         Args:
@@ -185,10 +179,20 @@ class ProjectPredictor:
             Pipeline: trained sklearn pipeline
         """
 
-        self.clf = setup(train, target='name', test_data=test,
-                         session_id=123, custom_pipeline=self.custom_transformer, preprocess=False,
+        text_pipeline = Pipeline([
+            ('vect', CountVectorizer(lowercase=True)),
+            ('tfidf', TfidfTransformer()),
+        ])
+        custom_transformer = make_column_transformer(
+            (text_pipeline,
+             text_feature),
+            (OneHotEncoder(handle_unknown="ignore"),
+             make_column_selector(dtype_include=object)))
+
+        self.clf = setup(train, target=target, test_data=test,
+                         session_id=123, custom_pipeline=custom_transformer, preprocess=False,
                          numeric_features=["duration", "attendee_cnt"],
-                         silent=True)
+                         silent=True, **kwargs)
 
         model = create_model('svm')
         if finetune:
