@@ -12,7 +12,13 @@ from sklearn.compose import make_column_selector
 
 class ProjectPredictor:
     def __init__(self) -> None:
-        pass
+        self.CALENDAR_COLS = ['kind', 'etag', 'id', 'status', 'htmlLink', 'created', 'updated',
+                              'summary', 'colorId', 'creator', 'organizer', 'start', 'end',
+                              'recurringEventId', 'originalStartTime', 'iCalUID', 'sequence',
+                              'attendees', 'hangoutLink', 'conferenceData', 'guestsCanModify',
+                              'reminders', 'eventType', 'location', 'visibility', 'privateCopy',
+                              'description', 'transparency', 'extendedProperties',
+                              'endTimeUnspecified', 'attachments', 'guestsCanInviteOthers']
 
     @staticmethod
     def attendee_count_(row):
@@ -82,7 +88,7 @@ class ProjectPredictor:
 
         te_df = self.convert_toggl_entries(toggl_entries)
 
-        ce_df = pd.DataFrame(calendar_events)
+        ce_df = pd.DataFrame(calendar_events, columns=self.CALENDAR_COLS, index=range(len(calendar_events)))
 
         train_df = (
             ce_df.filter(["start", "end", "attendees", "creator", "summary", "eventType", "colorId", "description"])
@@ -137,7 +143,7 @@ class ProjectPredictor:
         """
 
         te_df = self.convert_toggl_entries(toggl_entries)
-        ce_df = (pd.DataFrame(calendar_events)
+        ce_df = (pd.DataFrame(calendar_events, columns=self.CALENDAR_COLS, index=range(len(calendar_events)))
                  .assign(start_tm=lambda x: x.start.apply((lambda x: x.get("dateTime"))),
                          response=lambda x: x.attendees.apply(self.get_my_response))
                  .query("(eventType != 'outOfOffice') & (start_tm.notna()) & (response == 'accepted')", engine="python")
@@ -194,9 +200,9 @@ class ProjectPredictor:
                          numeric_features=["duration", "attendee_cnt"],
                          silent=True, **kwargs)
 
-        model = create_model('svm')
+        model = create_model('svm', fold=3)
         if finetune:
-            model = tune_model(model, search_library="optuna", search_algorithm="tpe", n_iter=200)
+            model = tune_model(model, search_library="optuna", search_algorithm="tpe", n_iter=200, fold=3)
 
         final_model = finalize_model(model)
 
