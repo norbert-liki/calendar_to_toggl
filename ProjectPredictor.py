@@ -70,6 +70,8 @@ class ProjectPredictor:
                     )
         if "pid" not in toggl_df.columns:
             toggl_df['pid'] = -1
+        if "description" not in toggl_df.columns:
+            toggl_df['description'] = "na"
         return toggl_df
 
     def preprocess_data(self, calendar_events: List[Dict], toggl_entries: List[Dict], toggl_projects: List[Dict]) -> Tuple[pd.DataFrame, pd.DataFrame]:
