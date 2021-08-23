@@ -35,7 +35,7 @@ gcloud pubsub topics create calendar
 
 ```
 gcloud functions deploy calendar_to_toggl \
-    --runtime python37 \
+    --runtime python38 \
     --trigger-topic calendar \
     --memory 512MB
 ```
@@ -69,7 +69,7 @@ gcloud pubsub topics create calendar_retrain
 
 ```
 gcloud functions deploy calendar_retrain \
-    --runtime python37 \
+    --runtime python38 \
     --trigger-topic calendar_retrain \
     --memory 128MB
 ```
@@ -116,11 +116,22 @@ From the retrainer_cf folder issue:
 
 ```
 gcloud compute instances create calendar-retrainer \
-    --image-family=debian-10 \
-    --image-project=debian-cloud \
+    --image-family=cos-89-lts \
+    --image-project=cos-cloud \
     --machine-type=e2-medium-2 \
     --scopes cloud-platform \
-    --metadata-from-file startup-script=startup_train.sh \
+    --container-image=gcr.io/norbert-liki-sandbox/calendar-trainer:latest \
     --zone us-central1-a \
     --preemptible
+```
+
+## Building and testing docker container for retraining
+```sh
+gcloud builds submit . -t gcr.io/norbert-liki-sandbox/calendar-trainer:latest --timeout=9999
+```
+
+Run the container locally to test it
+
+```sh
+docker run --rm -v ~/.config/gcloud:/.config/gcloud -e GOOGLE_APPLICATION_CREDENTIALS=/.config/gcloud/application_default_credentials.json gcr.io/norbert-liki-sandbox/calendar-trainer:latest
 ```

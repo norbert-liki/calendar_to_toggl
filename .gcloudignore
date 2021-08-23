@@ -9,3 +9,7 @@
 !/ProjectPredictor.py
 !/Calendar2Toggl.py
 !/DataStorer.py
+!/Pipfile
+!/Pipfile.lock
+!/Dockerfile
+!/train.py

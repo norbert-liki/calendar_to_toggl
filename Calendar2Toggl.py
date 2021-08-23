@@ -82,22 +82,26 @@ class Calender2Toggl():
     def load_event(row, toggl_client):
         """Parses and loads events to toggl in the right format.
         """
-
-        new_entry = {
-            "time_entry": {
-                "description": row['description'],
-                "tags": [],
-                "duration": (row['end_tm'] - row['start_tm']).seconds,
-                "start": row['start_tm'].isoformat(),
-                "stop": row['end_tm'].isoformat(),
-                "pid": row['id'],
-                "created_with": "calendar2toggl_app"
+        try:
+            new_entry = {
+                "time_entry": {
+                    "description": row['description'],
+                    "tags": [],
+                    "duration": (row['end_tm'] - row['start_tm']).seconds,
+                    "start": row['start_tm'].isoformat(),
+                    "stop": row['end_tm'].isoformat(),
+                    "pid": row['id'],
+                    "created_with": "calendar2toggl_app"
+                }
             }
-        }
 
-        toggl_client.create_time_entry(new_entry)
-        print(f"Event loaded: {row['summary']}")
-        return 'uploaded'
+            toggl_client.create_time_entry(new_entry)
+            print(f"Event loaded: {row['summary']}")
+            return 'uploaded'
+        except Exception as e:
+            print(f"Failed to load: {row}")
+            print(e)
+            return 'failed to upload'
 
     def load_to_toggl(self, calendar_events: pd.DataFrame) -> None:
         """Uploads calendar events to toggl

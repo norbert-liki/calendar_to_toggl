@@ -6,7 +6,7 @@ import dill
 
 class DataStorer:
     def __init__(self) -> None:
-        self.client = datastore.Client()
+        self.client = datastore.Client(project="norbert-liki-sandbox")
 
     def store(self, model: ProjectPredictor) -> None:
         """Stores an input pipeline object as byte string in Datastore.
