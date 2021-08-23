@@ -1,18 +1,14 @@
 import googleapiclient.discovery
-import os
 
 
 def create_instance(compute, project, zone, name):
     # Get the latest Debian image.
     image_response = compute.images().getFromFamily(
-        project='debian-cloud', family='debian-10').execute()
+        project='cos-cloud', family='cos-89-lts').execute()
     source_disk_image = image_response['selfLink']
 
     # Configure the machine
-    machine_type = "zones/%s/machineTypes/n1-standard-1" % zone
-    startup_script = open(
-        os.path.join(
-            os.path.dirname(__file__), 'startup_train.sh'), 'r').read()
+    machine_type = "zones/%s/machineTypes/n1-standard-2" % zone
 
     config = {
         'name': name,
@@ -55,11 +51,13 @@ def create_instance(compute, project, zone, name):
         # pass configuration from deployment scripts to instances.
         'metadata': {
             'items': [{
-                # Startup script is automatically executed by the
-                # instance upon startup.
-                'key': 'startup-script',
-                'value': startup_script
-            }]
+                "key": "gce-container-declaration",
+                "value": "spec:\n  containers:\n    - name: instance-1\n      image: 'gcr.io/norbert-liki-sandbox/calendar-trainer:latest'\n      stdin: false\n      tty: false\n  restartPolicy: Never\n\n# This container declaration format is not public API and may change without notice. Please\n# use gcloud command-line tool or Google Cloud Console to run Containers on Google Compute Engine."
+            },
+            {
+                "key": "google-logging-enabled",
+                "value": "true"
+      }]
         }
     }
 

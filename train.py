@@ -6,7 +6,7 @@ from DataStorer import DataStorer
 
 
 def download_credentials():
-    client = storage.Client()
+    client = storage.Client(project="norbert-liki-sandbox")
     bucket = client.get_bucket("norbert-liki-aliz")
     blob = storage.Blob("token.pickle", bucket)
     blob.download_to_filename("token.pickle")
@@ -55,13 +55,16 @@ def train():
     toggl_pjs = ctt._get_toggl_projects()
     te = ctt._query_existing_toggl_items()
     ce = ctt._get_calendar_events()
+    print("Events are loaded.")
 
     pp = ProjectPredictor()
     train, test = pp.preprocess_data(ce, te, toggl_pjs)
     pp.fit(train, test, finetune=True)
+    print("Training finished, starting saving.")
 
     ds = DataStorer()
     ds.store(pp)
+    print("Model saved, shutting down.")
 
     atexit.register(kill_vm)
 
@@ -70,5 +73,6 @@ if __name__ == "__main__":
     try:
         download_credentials()
         train()
-    except Exception:
+    except Exception as e:
+        print(e)
         atexit.register(kill_vm)
